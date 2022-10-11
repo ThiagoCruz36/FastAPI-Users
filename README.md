@@ -2,6 +2,11 @@
 
 Construction of an API for full user CRUD including manipulation of profile images. In this project, FastAPI, SQLAlchemy, SQLModel, Postgres, Alembic, and Docker were used.
 
+## Docker Downloads
+
+- Docker: [Docker](https://docs.docker.com/get-docker/)
+- Compose: [Compose](https://docs.docker.com/compose/install/)
+
 ## Project initialization by DOCKER
 
 Building the project:
