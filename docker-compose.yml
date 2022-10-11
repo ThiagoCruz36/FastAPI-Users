@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+
+  api:
+    build: ./
+    command: uvicorn app.main:app --reload --workers 1 --host 0.0.0.0 --port 8000
+    volumes:
+      - ./:/app
+    ports:
+      - 8000:8000
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/DB_FastAPI
+    depends_on:
+      - db
+
+  db:
+    image: postgres:13.4
+    ports:
+      - "5438:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=DB_FastAPI
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+    volumes:
+      - ./db_vol:/var/lib/postgresql/data
