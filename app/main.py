@@ -68,12 +68,15 @@ async def upload_user_image(id: int, db: Session = Depends(get_db), file: Upload
         raise HTTPException(status_code=404, detail="User not found")
 
     path = os.path.join(Config.UPLOADS_FOLDER, "users")
-
+    if not os.path.exists(path):
+        os.makedirs(path)
     # If an image already exists for the user, it will be replaced by the new one.
     if user.image_filename != None:
         delete_image = os.path.join(Config.UPLOADS_FOLDER, "users", user.image_filename)
-        delete_thumb = os.path.join(Config.UPLOADS_FOLDER, "users", ('thumb_' + user.image_filename))
-        os.remove(delete_image, delete_thumb)
+        os.remove(delete_image)
+    if user.thumb != None:
+        delete_thumb = os.path.join(Config.UPLOADS_FOLDER, "users", user.thumb)
+        os.remove(delete_thumb)
 
     try:
         # Generate a code for the image name
@@ -90,7 +93,7 @@ async def upload_user_image(id: int, db: Session = Depends(get_db), file: Upload
         file.file.close()
 
     # Create a thumb
-    thumb_name = 'thumb_' + str(user.id) + '_' + filename + '.png'
+    thumb_name = 'thumb_' + str(user.id) + '_' + (filename.split('.'))[0] + '.png'
     size = (200, 200)
     image = Image.open(os.path.join(Config.UPLOADS_FOLDER, "users", filename))
     image.thumbnail(size, Image.ANTIALIAS)
@@ -117,7 +120,7 @@ def get_user_image(id: int, db: Session = Depends(get_db)):
     
     return FileResponse(image)
 
-@app.get("/users/thumbs", response_model=UserResponse)
+@app.get("/users/{id}/thumbs", response_model=UserResponse)
 def get_user_images_thumbnails(id: int, db: Session = Depends(get_db)):
     user = UserRepository.get_user_by_id(db, id)
     if not user:
@@ -132,21 +135,24 @@ def get_user_images_thumbnails(id: int, db: Session = Depends(get_db)):
 
 
 @app.delete("/users/{id}/images", response_model=UserResponse)
-def delete_user_image(id: int, db: Session = Depends(get_db)):
+def delete_user_images(id: int, db: Session = Depends(get_db)):
     user = UserRepository.get_user_by_id(db, id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    if user.image_filename == None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image not found")
+    if user.image_filename != None:
+        delete_image = os.path.join(Config.UPLOADS_FOLDER, "users", user.image_filename)
+        os.remove(delete_image)
+        image_name = None
+    else: 
+        image_name = user.image_filename
 
-    delete_image = os.path.join(Config.UPLOADS_FOLDER, "users", user.image_filename)
-    os.remove(delete_image)
+    if user.thumb != None:
+        delete_thumb = os.path.join(Config.UPLOADS_FOLDER, "users", user.thumb)
+        os.remove(delete_thumb)
+        thumb_name = None
+    else: 
+        thumb_name = user.thumb
 
-    if user.thumb == None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Thumb not found")
-
-    delete_thumb = os.path.join(Config.UPLOADS_FOLDER, "users", ('thumb_' + user.image_filename))
-    os.remove(delete_thumb)
-
-    return ('Deleted image')
+    update_user = UserRepository.user_save(db, User(id=id, image_filename=image_name, thumb=thumb_name, name=user.name, email=user.email))
+    return (UserResponse.from_orm(update_user))
