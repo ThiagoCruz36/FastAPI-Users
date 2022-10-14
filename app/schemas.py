@@ -9,8 +9,9 @@ class UserBase(BaseModel):
     thumb: Optional[str]
 
 
-class UserRequest(UserBase):
-    ...
+class UserRequest(BaseModel):
+    email: str
+    name: str
 
 class UserResponse(UserBase):
     id: int

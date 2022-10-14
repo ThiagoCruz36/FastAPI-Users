@@ -43,19 +43,35 @@ def create_user(request: UserRequest, db: Session = Depends(get_db)):
 
 @app.put("/users/{id}", response_model=UserResponse)
 def update_user(id: int, request: UserRequest, db: Session = Depends(get_db)):
-    if not UserRepository.get_user_by_id(db, id):
+    user = UserRepository.get_user_by_id(db, id)
+    if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
-    user = UserRepository.user_save(db, User(id=id, **request.dict()))
-    return UserResponse.from_orm(user)
+
+    user_update = UserRepository.user_save(db, User(id=id, **request.dict(), image_filename=user.image_filename, thumb=user.thumb))
+    return UserResponse.from_orm(user_update)
 
 @app.delete("/users/{id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(id: int, db: Session = Depends(get_db)):
-    if not UserRepository.get_user_by_id(db, id):
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
-        )
+    user = UserRepository.get_user_by_id(db, id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    if user.image_filename != None:
+        delete_image = os.path.join(Config.UPLOADS_FOLDER, "users", user.image_filename)
+        os.remove(delete_image)
+        image_name = None
+    else: 
+        image_name = user.image_filename
+
+    if user.thumb != None:
+        delete_thumb = os.path.join(Config.UPLOADS_FOLDER, "users", user.thumb)
+        os.remove(delete_thumb)
+        thumb_name = None
+    else: 
+        thumb_name = user.thumb
+        
     UserRepository.delete_user(db, id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
